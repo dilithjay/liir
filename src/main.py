@@ -15,7 +15,15 @@ import datetime
 from run import run
 
 
-SETTINGS['CAPTURE_MODE'] = "fd" # set to "no" if you want to see stdout/stderr in console
+def patch_asscalar(a):
+    return a.item()
+
+
+setattr(np, "asscalar", patch_asscalar)
+
+SETTINGS["CAPTURE_MODE"] = (
+    "fd"  # set to "no" if you want to see stdout/stderr in console
+)
 logger = get_logger()
 
 ex = Experiment("pymarl")
@@ -30,7 +38,7 @@ def my_main(_run, _config, _log, env_args):
     # Setting the random seed throughout the modules
     np.random.seed(_config["seed"])
     th.manual_seed(_config["seed"])
-    env_args['seed'] = _config["seed"]
+    env_args["seed"] = _config["seed"]
 
     # run the framework
     run(_run, _config, _log)
@@ -45,7 +53,15 @@ def _get_config(params, arg_name, subfolder):
             break
 
     if config_name is not None:
-        with open(os.path.join(os.path.dirname(__file__), "config", subfolder, "{}.yaml".format(config_name)), "r") as f:
+        with open(
+            os.path.join(
+                os.path.dirname(__file__),
+                "config",
+                subfolder,
+                "{}.yaml".format(config_name),
+            ),
+            "r",
+        ) as f:
             try:
                 config_dict = yaml.load(f)
             except yaml.YAMLError as exc:
@@ -62,11 +78,13 @@ def recursive_dict_update(d, u):
     return d
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     params = deepcopy(sys.argv)
 
     # Get the defaults from default.yaml
-    with open(os.path.join(os.path.dirname(__file__), "config", "default.yaml"), "r") as f:
+    with open(
+        os.path.join(os.path.dirname(__file__), "config", "default.yaml"), "r"
+    ) as f:
         try:
             config_dict = yaml.load(f)
         except yaml.YAMLError as exc:
@@ -77,7 +95,7 @@ if __name__ == '__main__':
     alg_config = _get_config(params, "--config", "algs")
     config_dict = recursive_dict_update(config_dict, env_config)
     config_dict = recursive_dict_update(config_dict, alg_config)
-    
+
     # specify the map for experiment
     map_name = None
     for _i, _v in enumerate(params):
@@ -86,18 +104,23 @@ if __name__ == '__main__':
             del params[_i]
             break
     if map_name:
-        config_dict['env_args']['map_name'] = map_name
-    else: 
-        map_name = config_dict['env_args']['map_name'] 
-        
+        config_dict["env_args"]["map_name"] = map_name
+    else:
+        map_name = config_dict["env_args"]["map_name"]
+
     # now add all the config to sacred
     ex.add_config(config_dict)
 
     # Save to disk by default for sacred
-    unique_token = "{}_{}_{}".format(config_dict['name'], map_name, datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
-    logger.info("Saving to FileStorageObserver in results/sacred/{}/.".format(unique_token))
+    unique_token = "{}_{}_{}".format(
+        config_dict["name"],
+        map_name,
+        datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
+    )
+    logger.info(
+        "Saving to FileStorageObserver in results/sacred/{}/.".format(unique_token)
+    )
     file_obs_path = os.path.join(results_path, "sacred", unique_token)
     ex.observers.append(FileStorageObserver.create(file_obs_path))
 
     ex.run_commandline(params)
-

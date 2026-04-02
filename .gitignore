@@ -11,4 +11,5 @@ src/runners/__pycache__/
 src/utils/__pycache__/
 results/
 *.html
-
+.venv*/
+3rdparty/
